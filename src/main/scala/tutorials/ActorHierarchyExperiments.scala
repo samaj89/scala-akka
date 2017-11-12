@@ -16,12 +16,34 @@ class PrintMyActorRefActor extends Actor {
   }
 }
 
+class StartStopActor1 extends Actor {
+  override def preStart(): Unit = {
+    println("first started")
+    context.actorOf(Props[StartStopActor2], "second")
+  }
+
+  override def postStop(): Unit = println("first stopped")
+
+  def receive = {
+    case "stop" => context.stop(self)
+  }
+}
+
+class StartStopActor2 extends Actor {
+  override def preStart(): Unit = println("second started")
+  override def postStop(): Unit = println("second stopped")
+  def receive = Actor.emptyBehavior
+}
+
 object ActorHierarchyExperiments extends App {
   val system = ActorSystem("testSystem")
 
-  val firstRef = system.actorOf(Props[PrintMyActorRefActor], "first-Actor")
-  println(s"First: $firstRef")
-  firstRef ! "printit"
+//  val firstRef = system.actorOf(Props[PrintMyActorRefActor], "first-Actor")
+//  println(s"First: $firstRef")
+//  firstRef ! "printit"
+
+  val first = system.actorOf(Props[StartStopActor1], "first")
+  first ! "stop"
 
   println(">>> Press ENTER to exit <<<")
   try StdIn.readLine()
