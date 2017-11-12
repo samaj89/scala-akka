@@ -46,6 +46,8 @@ class SupervisingActor extends Actor {
 class SupervisedActor extends Actor {
   override def preStart(): Unit = println("supervised actor started")
   override def postStop(): Unit = println("supervised actor stopped")
+  override def preRestart(reason: Throwable, message: Option[Any]): Unit = println("preparing to restart supervised actor")
+  override def postRestart(reason: Throwable): Unit = println("supervised actor restarted")
 
   def receive = {
     case "fail" =>
