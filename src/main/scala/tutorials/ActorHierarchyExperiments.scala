@@ -35,6 +35,25 @@ class StartStopActor2 extends Actor {
   def receive = Actor.emptyBehavior
 }
 
+class SupervisingActor extends Actor {
+  val child = context.actorOf(Props[SupervisedActor], "supervised-actor")
+
+  def receive = {
+    case "failChild" => child ! "fail"
+  }
+}
+
+class SupervisedActor extends Actor {
+  override def preStart(): Unit = println("supervised actor started")
+  override def postStop(): Unit = println("supervised actor stopped")
+
+  def receive = {
+    case "fail" =>
+      println("supervised actor fails now")
+      throw new Exception("I failed!")
+  }
+}
+
 object ActorHierarchyExperiments extends App {
   val system = ActorSystem("testSystem")
 
@@ -42,8 +61,11 @@ object ActorHierarchyExperiments extends App {
 //  println(s"First: $firstRef")
 //  firstRef ! "printit"
 
-  val first = system.actorOf(Props[StartStopActor1], "first")
-  first ! "stop"
+//  val first = system.actorOf(Props[StartStopActor1], "first")
+//  first ! "stop"
+
+  val supervisingActor = system.actorOf(Props[SupervisingActor], "supervising-actor")
+  supervisingActor ! "failChild"
 
   println(">>> Press ENTER to exit <<<")
   try StdIn.readLine()
