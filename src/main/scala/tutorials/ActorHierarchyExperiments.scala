@@ -5,7 +5,7 @@ import akka.actor.{Actor, ActorSystem, Props}
 import scala.io.StdIn
 
 /**
-  * Code baseed on the Akka tutorial at https://doc.akka.io/docs/akka/current/scala/guide/tutorial_1.html
+  * Code based on the Akka tutorial at https://doc.akka.io/docs/akka/current/scala/guide/tutorial_1.html
   */
 
 class PrintMyActorRefActor extends Actor {

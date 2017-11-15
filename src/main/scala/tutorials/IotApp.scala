@@ -6,7 +6,8 @@ import tutorials.Device.{ReadTemperature, RespondTemperature}
 import scala.io.StdIn
 
 /**
-  * Code baseed on the Akka tutorial at https://doc.akka.io/docs/akka/current/scala/guide/tutorial_2.html
+  * Code based on the Akka tutorial at https://doc.akka.io/docs/akka/current/scala/guide/tutorial_2.html
+  * and at https://doc.akka.io/docs/akka/current/scala/guide/tutorial_3.html
   */
 
 object IotSupervisor {
