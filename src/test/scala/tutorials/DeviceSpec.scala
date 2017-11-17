@@ -2,6 +2,7 @@ package tutorials
 
 import akka.actor.ActorSystem
 import akka.testkit.{TestKit, TestProbe}
+import scala.concurrent.duration._
 import org.scalatest.{BeforeAndAfterAll, FlatSpecLike, Matchers}
 
 /**
@@ -48,5 +49,25 @@ class DeviceSpec(_system: ActorSystem)
     val response2 = probe.expectMsgType[Device.RespondTemperature]
     response2.requestId should ===(4)
     response2.value should ===(Some(55.0))
+  }
+
+  "A Device actor" should "reply to registration requests" in {
+    val probe = TestProbe()
+    val deviceActor = system.actorOf(Device.props("group", "device"))
+
+    deviceActor.tell(DeviceManager.RequestTrackDevice("group", "device"), probe.ref)
+    probe.expectMsg(DeviceManager.DeviceRegistered)
+    probe.lastSender should ===(deviceActor)
+  }
+
+  "A Device actor" should "gnore invalid registration requests" in {
+    val probe = TestProbe()
+    val deviceActor = system.actorOf(Device.props("group", "device"))
+
+    deviceActor.tell(DeviceManager.RequestTrackDevice("groupB", "device"), probe.ref)
+    probe.expectNoMsg(500 millis)
+
+    deviceActor.tell(DeviceManager.RequestTrackDevice("group", "deviceB"), probe.ref)
+    probe.expectNoMsg(500 millis)
   }
 }

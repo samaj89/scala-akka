@@ -21,6 +21,11 @@ class IotSupervisor extends Actor with ActorLogging {
   override def receive = Actor.emptyBehavior
 }
 
+object DeviceManager {
+  final case class RequestTrackDevice(groupId: String, deviceId: String)
+  case object DeviceRegistered
+}
+
 object Device {
   def props(groupId: String, deviceId: String): Props = Props(new Device(groupId, deviceId))
 
@@ -39,6 +44,13 @@ class Device(groupId: String, deviceId: String) extends Actor with ActorLogging 
   override def postStop(): Unit = log.info("Device actor {}-{} stopped", groupId, deviceId)
 
   override def receive = {
+    case DeviceManager.RequestTrackDevice(`groupId`, `deviceId`) =>
+      sender() ! DeviceManager.DeviceRegistered
+
+    case DeviceManager.RequestTrackDevice(groupId, deviceId) =>
+      log.info("Ignoring TrackDevice request for {}-{}. This actor is responsible for {}-{}.",
+        groupId, deviceId, this.groupId, this.deviceId)
+
     case RecordTemperature(id, value) =>
       log.info("Recorded temperature reading {} with {}", value, id)
       lastTemperatureReading = Some(value)
