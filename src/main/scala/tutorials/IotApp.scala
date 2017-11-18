@@ -1,6 +1,6 @@
 package tutorials
 
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Terminated}
 import tutorials.DeviceManager.RequestTrackDevice
 
 import scala.io.StdIn
@@ -32,6 +32,7 @@ object DeviceGroup {
 
 class DeviceGroup(groupId: String) extends Actor with ActorLogging {
   var deviceIdToActor = Map.empty[String, ActorRef]
+  var actorToDeviceId = Map.empty[ActorRef, String]
 
   override def preStart(): Unit = log.info("DeviceGroup {} started", groupId)
   override def postStop(): Unit = log.info("DeviceGroup {} stopped", groupId)
@@ -47,7 +48,10 @@ class DeviceGroup(groupId: String) extends Actor with ActorLogging {
         case None =>
           log.info("Creating device actor for {}", trackMsg.deviceId)
           val deviceActor = context.actorOf(Device.props(groupId, trackMsg.deviceId), s"device-${trackMsg.deviceId}")
+          // watch newly created actor and receive Terminated message if it stops
+          context.watch(deviceActor)
           deviceIdToActor += trackMsg.deviceId -> deviceActor
+          actorToDeviceId += deviceActor -> trackMsg.deviceId
           deviceActor forward trackMsg
       }
 
@@ -56,6 +60,12 @@ class DeviceGroup(groupId: String) extends Actor with ActorLogging {
         "Ignoring TrackDevide request for {}. This actor is responsible for ().",
         groupId, this.groupId
       )
+
+    case Terminated(deviceActor) =>
+      val deviceId = actorToDeviceId(deviceActor)
+      log.info("Device actor {} has been terminated", deviceId)
+      actorToDeviceId -= deviceActor
+      deviceIdToActor -= deviceId
   }
 }
 
