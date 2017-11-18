@@ -2,7 +2,7 @@ package tutorials
 
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Terminated}
 import tutorials.DeviceGroup.{ReplyDeviceList, RequestDeviceList}
-import tutorials.DeviceManager.RequestTrackDevice
+import tutorials.DeviceManager.{ReplyGroupList, RequestGroupList, RequestTrackDevice}
 
 import scala.io.StdIn
 
@@ -24,6 +24,9 @@ class IotSupervisor extends Actor with ActorLogging {
 
 object DeviceManager {
   def props(): Props = Props(new DeviceManager)
+
+  final case class RequestGroupList(requestId: String)
+  final case class ReplyGroupList(requestId: String, ids: Set[String])
 
   final case class RequestTrackDevice(groupId: String, deviceId: String)
   case object DeviceRegistered
@@ -49,6 +52,9 @@ class DeviceManager extends Actor with ActorLogging {
           groupIdToActor += groupId -> groupActor
           actorToGroupId += groupActor -> groupId
       }
+
+    case RequestGroupList(requestId) =>
+      sender() ! ReplyGroupList(requestId, groupIdToActor.keySet)
 
     case Terminated(groupActor) =>
       val groupId = actorToGroupId(groupActor)
