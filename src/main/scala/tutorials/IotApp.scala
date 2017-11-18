@@ -1,6 +1,7 @@
 package tutorials
 
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Terminated}
+import tutorials.DeviceGroup.{ReplyDeviceList, RequestDeviceList}
 import tutorials.DeviceManager.RequestTrackDevice
 
 import scala.io.StdIn
@@ -28,6 +29,9 @@ object DeviceManager {
 
 object DeviceGroup {
   def props(groupId: String): Props = Props(new DeviceGroup(groupId))
+
+  final case class RequestDeviceList(requestId: Long)
+  final case class ReplyDeviceList(requestId: Long, ids: Set[String])
 }
 
 class DeviceGroup(groupId: String) extends Actor with ActorLogging {
@@ -60,6 +64,9 @@ class DeviceGroup(groupId: String) extends Actor with ActorLogging {
         "Ignoring TrackDevide request for {}. This actor is responsible for ().",
         groupId, this.groupId
       )
+
+    case RequestDeviceList(requestId) =>
+      sender() ! ReplyDeviceList(requestId, deviceIdToActor.keySet)
 
     case Terminated(deviceActor) =>
       val deviceId = actorToDeviceId(deviceActor)
