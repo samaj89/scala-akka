@@ -7,8 +7,10 @@ import tutorials.DeviceManager.{ReplyGroupList, RequestGroupList, RequestTrackDe
 import scala.io.StdIn
 
 /**
-  * Code based on the Akka tutorial at https://doc.akka.io/docs/akka/current/scala/guide/tutorial_2.html
-  * and at https://doc.akka.io/docs/akka/current/scala/guide/tutorial_3.html
+  * Code based on the Akka tutorial at:
+  * https://doc.akka.io/docs/akka/current/scala/guide/tutorial_2.html
+  * https://doc.akka.io/docs/akka/current/scala/guide/tutorial_3.html
+  * https://doc.akka.io/docs/akka/current/scala/guide/tutorial_4.html
   */
 
 object IotSupervisor {
@@ -25,8 +27,8 @@ class IotSupervisor extends Actor with ActorLogging {
 object DeviceManager {
   def props(): Props = Props(new DeviceManager)
 
-  final case class RequestGroupList(requestId: String)
-  final case class ReplyGroupList(requestId: String, ids: Set[String])
+  final case class RequestGroupList(requestId: Long)
+  final case class ReplyGroupList(requestId: Long, ids: Set[String])
 
   final case class RequestTrackDevice(groupId: String, deviceId: String)
   case object DeviceRegistered
