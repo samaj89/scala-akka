@@ -60,7 +60,7 @@ class DeviceSpec(_system: ActorSystem)
     probe.lastSender should ===(deviceActor)
   }
 
-  "A Device actor" should "gnore invalid registration requests" in {
+  "A Device actor" should "ignore invalid registration requests" in {
     val probe = TestProbe()
     val deviceActor = system.actorOf(Device.props("group", "device"))
 
@@ -69,5 +69,48 @@ class DeviceSpec(_system: ActorSystem)
 
     deviceActor.tell(DeviceManager.RequestTrackDevice("group", "deviceB"), probe.ref)
     probe.expectNoMsg(500 millis)
+  }
+
+  "A DeviceGroup actor" should "be able to register a device actor" in {
+    val probe = TestProbe()
+    val groupActor = system.actorOf(DeviceGroup.props("group"))
+
+    groupActor.tell(DeviceManager.RequestTrackDevice("group", "device1"), probe.ref)
+    probe.expectMsg(DeviceManager.DeviceRegistered)
+    val deviceActor1 = probe.lastSender
+
+    groupActor.tell(DeviceManager.RequestTrackDevice("group", "device2"), probe.ref)
+    probe.expectMsg(DeviceManager.DeviceRegistered)
+    val deviceActor2 = probe.lastSender
+    deviceActor1 should !==(deviceActor2)
+
+    // Check that the device actors are working
+    deviceActor1.tell(Device.RecordTemperature(requestId = 0, 1.0), probe.ref)
+    probe.expectMsg(Device.TemperatureRecorded(requestId = 0))
+    deviceActor2.tell(Device.RecordTemperature(requestId = 1, 2.0), probe.ref)
+    probe.expectMsg(Device.TemperatureRecorded(requestId = 1))
+  }
+
+  "A DeviceGroup actor" should "ignore requests for wrong groupId" in {
+    val probe = TestProbe()
+    val groupActor = system.actorOf(DeviceGroup.props("group"))
+
+    groupActor.tell(DeviceManager.RequestTrackDevice("wrongGroup", "device1"), probe.ref)
+    probe.expectNoMsg(500.milliseconds)
+  }
+
+  "A DeviceGroup actor" should "return same actor for same deviceId" in {
+    val probe = TestProbe()
+    val groupActor = system.actorOf(DeviceGroup.props("group"))
+
+    groupActor.tell(DeviceManager.RequestTrackDevice("group", "device1"), probe.ref)
+    probe.expectMsg(DeviceManager.DeviceRegistered)
+    val deviceActor1 = probe.lastSender
+
+    groupActor.tell(DeviceManager.RequestTrackDevice("group", "device1"), probe.ref)
+    probe.expectMsg(DeviceManager.DeviceRegistered)
+    val deviceActor2 = probe.lastSender
+
+    deviceActor1 should ===(deviceActor2)
   }
 }
