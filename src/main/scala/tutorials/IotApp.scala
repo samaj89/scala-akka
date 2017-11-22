@@ -153,6 +153,35 @@ class DeviceGroupQuery(actorToDeviceId: Map[ActorRef, String], requestId: Long,
 
   override def postStop(): Unit = queryTimeoutTimer.cancel()
 
+  override def receive: Receive =
+    waitingForReplies(
+      Map.empty,
+      actorToDeviceId.keySet
+    )
+
+  def waitingForReplies(repliesSoFar: Map[String, DeviceGroup.TemperatureReading],
+                         stillWaiting: Set[ActorRef]): Receive = {
+    case Device.RespondTemperature(0, valueOption) =>
+      val deviceActor = sender()
+      val reading = valueOption match {
+        case Some(value) => DeviceGroup.Temperature(value)
+        case None        => DeviceGroup.TemperatureNotAvailable
+      }
+      receivedResponse(deviceActor, reading, stillWaiting, repliesSoFar)
+
+    case Terminated(deviceActor) =>
+      receivedResponse(deviceActor, DeviceGroup.DeviceNotAvailable, stillWaiting, repliesSoFar)
+
+    case CollectionTimeout =>
+      val timedOutReplies =
+        stillWaiting.map { deviceActor =>
+          val deviceId = actorToDeviceId(deviceActor)
+          deviceId -> DeviceGroup.DeviceTimedOut
+        }
+      requester ! DeviceGroup.RespondAllTemperatures(requestId, repliesSoFar ++ timedOutReplies)
+      context.stop(self)
+  }
+
 }
 
 object Device {
