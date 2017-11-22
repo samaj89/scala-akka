@@ -4,6 +4,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Terminated
 import tutorials.DeviceGroup.{ReplyDeviceList, RequestDeviceList}
 import tutorials.DeviceManager.{ReplyGroupList, RequestGroupList, RequestTrackDevice}
 
+import scala.concurrent.duration.FiniteDuration
 import scala.io.StdIn
 
 /**
@@ -11,6 +12,7 @@ import scala.io.StdIn
   * https://doc.akka.io/docs/akka/current/scala/guide/tutorial_2.html
   * https://doc.akka.io/docs/akka/current/scala/guide/tutorial_3.html
   * https://doc.akka.io/docs/akka/current/scala/guide/tutorial_4.html
+  * https://doc.akka.io/docs/akka/current/guide/tutorial_5.html?language=scala
   */
 
 object IotSupervisor {
@@ -122,6 +124,35 @@ class DeviceGroup(groupId: String) extends Actor with ActorLogging {
       actorToDeviceId -= deviceActor
       deviceIdToActor -= deviceId
   }
+}
+
+object DeviceGroupQuery {
+  // a message to send in the event that the ReadTemperature request is not responded to in time
+  case object CollectionTimeout
+
+  def props(actorToDeviceId: Map[ActorRef, String], requestId: Long,
+              requester: ActorRef, timeout: FiniteDuration): Props =
+    Props(new DeviceGroupQuery(actorToDeviceId, requestId, requester, timeout))
+}
+
+class DeviceGroupQuery(actorToDeviceId: Map[ActorRef, String], requestId: Long,
+                         requester: ActorRef, timeout: FiniteDuration) extends Actor with ActorLogging {
+
+  import DeviceGroupQuery._
+  import context.dispatcher
+  // used to send the CollectionTimeout message if response not received in time; Cancellable if response received
+  val queryTimeoutTimer = context.system.scheduler.scheduleOnce(timeout, self, CollectionTimeout)
+
+  // when DeviceGroupQuery actor created, watch all Device actors and send each a ReadTemperature message
+  override def preStart(): Unit = {
+    actorToDeviceId.keysIterator.foreach { deviceActor ⇒
+      context.watch(deviceActor)
+      deviceActor ! Device.ReadTemperature(0)
+    }
+  }
+
+  override def postStop(): Unit = queryTimeoutTimer.cancel()
+
 }
 
 object Device {
