@@ -1,10 +1,10 @@
 package tutorials
 
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Terminated}
-import tutorials.DeviceGroup.{ReplyDeviceList, RequestDeviceList}
+import tutorials.DeviceGroup.{ReplyDeviceList, RequestAllTemperatures, RequestDeviceList}
 import tutorials.DeviceManager.{ReplyGroupList, RequestGroupList, RequestTrackDevice}
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
 import scala.io.StdIn
 
 /**
@@ -87,6 +87,7 @@ object DeviceGroup {
 class DeviceGroup(groupId: String) extends Actor with ActorLogging {
   var deviceIdToActor = Map.empty[String, ActorRef]
   var actorToDeviceId = Map.empty[ActorRef, String]
+  var nextCollectionId = 0L
 
   override def preStart(): Unit = log.info("DeviceGroup {} started", groupId)
   override def postStop(): Unit = log.info("DeviceGroup {} stopped", groupId)
@@ -117,6 +118,14 @@ class DeviceGroup(groupId: String) extends Actor with ActorLogging {
 
     case RequestDeviceList(requestId) =>
       sender() ! ReplyDeviceList(requestId, deviceIdToActor.keySet)
+
+    case RequestAllTemperatures(requestId) =>
+      context.actorOf(DeviceGroupQuery.props(
+        actorToDeviceId = actorToDeviceId,
+        requestId = requestId,
+        requester = sender(),
+        3.seconds
+      ))
 
     case Terminated(deviceActor) =>
       val deviceId = actorToDeviceId(deviceActor)
